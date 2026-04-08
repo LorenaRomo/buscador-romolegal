@@ -62,13 +62,18 @@ try:
     
     df_filtrado = df_filtrado[(df_filtrado['anio'] >= rango_anio[0]) & (df_filtrado['anio'] <= rango_anio[1])]
 
-    # 2. Aplicar lógica de búsqueda cruzada (Interseccionalidad)
+   # 2. Aplicar lógica de búsqueda cruzada (INTERSECCIÓN OBLIGATORIA)
     if busqueda:
-        # Separamos por el símbolo '+' o por espacios
-        palabras_clave = busqueda.replace('+', ' ').split()
-        for palabra in palabras_clave:
-            # Filtro sucesivo: cada palabra debe estar presente en el texto
-            df_filtrado = df_filtrado[df_filtrado['text'].str.contains(palabra.strip(), case=False, na=False)]
+        # Limpiamos la cadena: quitamos el '+' y dividimos por espacios
+        # Esto permite que busque tanto 'estabilidad + embarazo' como 'estabilidad embarazo'
+        terminos = busqueda.replace('+', ' ').split()
+        
+        for t in terminos:
+            t = t.strip()
+            if t:
+                # La magia ocurre aquí: cada ciclo reduce el DataFrame 
+                # dejando solo lo que contiene el término actual Y los anteriores.
+                df_filtrado = df_filtrado[df_filtrado['text'].str.contains(t, case=False, na=False)]
 
     # --- MOSTRAR RESULTADOS (LÓGICA MEJORADA) ---
     
