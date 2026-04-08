@@ -1,45 +1,98 @@
 import streamlit as st
 import pandas as pd
 
-# Configuración estética RomoLegal
-st.set_page_config(page_title="Buscador RomoLegal", page_icon="⚖️", layout="wide")
+# Configuración de la interfaz (Layout ancho para mejor lectura de sentencias)
+st.set_page_config(page_title="RomoLegal - Inteligencia Jurídica", page_icon="⚖️", layout="wide")
 
+# Estilos visuales personalizados (Sobriedad y elegancia para el Tribunal)
 st.markdown("""
     <style>
-    .titulo { color: #1a237e; font-family: 'Georgia', serif; text-align: center; }
-    .stButton>button { background-color: #1a237e; color: white; }
-    .card { border-left: 5px solid #1a237e; padding: 15px; background: white; box-shadow: 2px 2px 5px #eee; margin-bottom: 10px; }
+    .main { background-color: #f8f9fa; }
+    .stSidebar { background-color: #1a237e; color: white; }
+    .titulo { color: #1a237e; font-family: 'Georgia', serif; text-align: center; font-weight: bold; margin-bottom: 20px; }
+    .card { border-left: 6px solid #1a237e; padding: 20px; background: white; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .sentencia-id { color: #1a237e; font-size: 20px; font-weight: bold; margin-bottom: 5px; }
+    .meta { color: #555; font-size: 14px; margin-bottom: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-st.markdown("<h1 class='titulo'>🏛️ Buscador de Jurisprudencia RomoLegal</h1>", unsafe_allow_html=True)
-
 @st.cache_data
 def cargar_datos():
-    # ID extraído de tu enlace de Sheets
+    # ID de tu Google Sheet
     sheet_id = "1idun_9zH-y57FdiqhNHxcnY4bA8T2iw7"
-    # URL para que Python lo descargue como CSV automáticamente
     url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv"
     df = pd.read_csv(url)
+    # Limpieza básica de datos
     df['text'] = df['text'].astype(str).fillna('')
+    df['anio'] = pd.to_numeric(df['anio'], errors='coerce').fillna(0).astype(int)
     return df
 
 try:
     df = cargar_datos()
-    tema = st.text_input("Ingrese el concepto jurídico (Ej: Habeas Data, eutanasia, consulta previa, estabilidad laboral):")
+
+    # --- BARRA LATERAL (SIDEBAR) PARA FILTROS TÉCNICOS ---
+    st.sidebar.image("https://cdn-icons-png.flaticon.com/512/2821/2821637.png", width=100)
+    st.sidebar.title("Filtros de Especialidad")
     
-    if tema:
-        resultados = df[df['text'].str.contains(tema, case=False, na=False)]
-        st.success(f"Se hallaron {len(resultados)} coincidencias en la base de datos.")
+    # Filtro por Magistrado Ponente
+    lista_magistrados = ["Todos los Magistrados"] + sorted(df['Magistrado Ponente'].unique().tolist())
+    mag_seleccionado = st.sidebar.selectbox("Filtrar por Ponente:", lista_magistrados)
+
+    # Filtro por Rango Cronológico
+    anio_min, anio_max = int(df['anio'].min()), int(df['anio'].max())
+    rango_anio = st.sidebar.slider("Rango de Años:", anio_min, anio_max, (anio_min, anio_max))
+
+    # --- CUERPO PRINCIPAL ---
+    st.markdown("<h1 class='titulo'>🏛️ Buscador de Jurisprudencia RomoLegal</h1>", unsafe_allow_html=True)
+    
+    # Campo de búsqueda con la instrucción específica que pediste
+    busqueda = st.text_input(
+        "Ingrese conceptos jurídicos:", 
+        placeholder="Para una búsqueda específica, combine términos con '+'. Ej: estabilidad laboral + embarazo"
+    )
+    
+    st.caption("💡 Tip: El sistema buscará sentencias que contengan TODOS los términos ingresados.")
+
+    # Lógica de filtrado dinámico
+    df_filtrado = df.copy()
+
+    # 1. Aplicar filtros de la barra lateral
+    if mag_seleccionado != "Todos los Magistrados":
+        df_filtrado = df_filtrado[df_filtrado['Magistrado Ponente'] == mag_seleccionado]
+    
+    df_filtrado = df_filtrado[(df_filtrado['anio'] >= rango_anio[0]) & (df_filtrado['anio'] <= rango_anio[1])]
+
+    # 2. Aplicar lógica de búsqueda cruzada (Interseccionalidad)
+    if busqueda:
+        # Separamos por el símbolo '+' o por espacios
+        palabras_clave = busqueda.replace('+', ' ').split()
+        for palabra in palabras_clave:
+            # Filtro sucesivo: cada palabra debe estar presente en el texto
+            df_filtrado = df_filtrado[df_filtrado['text'].str.contains(palabra.strip(), case=False, na=False)]
+
+    # --- MOSTRAR RESULTADOS ---
+    if not df_filtrado.empty:
+        st.success(f"Análisis completado: Se hallaron {len(df_filtrado)} providencias coincidentes.")
         
-        for i, fila in resultados.iterrows():
-            st.markdown(f"""
-            <div class="card">
-                <h4>Sentencia {fila['Sentencia']}</h4>
-                <p><b>Ponente:</b> {fila['Magistrado Ponente']} | <b>Año:</b> {fila['anio']}</p>
-                <p style='font-size: 14px;'>{fila['text'][:350]}...</p>
-                <a href="{fila['url']}" target="_blank">Ver providencia completa</a>
-            </div>
-            """, unsafe_allow_html=True)
+        for i, fila in df_filtrado.iterrows():
+            with st.container():
+                st.markdown(f"""
+                <div class="card">
+                    <div class="sentencia-id">Sentencia {fila['Sentencia']}</div>
+                    <div class="meta">
+                        <b>Magistrado Ponente:</b> {fila['Magistrado Ponente']} | 
+                        <b>Año de la providencia:</b> {fila['anio']}
+                    </div>
+                    <p style='font-size: 15px; line-height: 1.6; color: #333;'>
+                        {fila['text'][:450]}...
+                    </p>
+                    <a href="{fila['url']}" target="_blank" style="color: #1a237e; font-weight: bold; text-decoration: none; border: 1px solid #1a237e; padding: 5px 10px; border-radius: 5px;">
+                        📂 Ver providencia completa
+                    </a>
+                </div>
+                """, unsafe_allow_html=True)
+    else:
+        st.warning("No se encontraron registros que coincidan con la combinación de términos y filtros seleccionados.")
+
 except Exception as e:
-    st.error("Error al conectar con la base de datos de Google Sheets. Verifique los permisos de compartir.")
+    st.error(f"Error en la conexión con la base de datos: {e}")
