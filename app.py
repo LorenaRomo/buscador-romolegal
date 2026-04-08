@@ -70,29 +70,35 @@ try:
             # Filtro sucesivo: cada palabra debe estar presente en el texto
             df_filtrado = df_filtrado[df_filtrado['text'].str.contains(palabra.strip(), case=False, na=False)]
 
-    # --- MOSTRAR RESULTADOS ---
-    if not df_filtrado.empty:
-        st.success(f"Análisis completado: Se hallaron {len(df_filtrado)} providencias coincidentes.")
-        
-        for i, fila in df_filtrado.iterrows():
-            with st.container():
-                st.markdown(f"""
-                <div class="card">
-                    <div class="sentencia-id">Sentencia {fila['Sentencia']}</div>
-                    <div class="meta">
-                        <b>Magistrado Ponente:</b> {fila['Magistrado Ponente']} | 
-                        <b>Año de la providencia:</b> {fila['anio']}
+    # --- MOSTRAR RESULTADOS (LÓGICA MEJORADA) ---
+    
+    # Solo mostramos resultados si el usuario ha escrito algo o ha filtrado por un magistrado específico
+    if busqueda or mag_seleccionado != "Todos los Magistrados":
+        if not df_filtrado.empty:
+            st.success(f"Análisis completado: Se hallaron {len(df_filtrado)} providencias coincidentes.")
+            
+            for i, fila in df_filtrado.iterrows():
+                with st.container():
+                    st.markdown(f"""
+                    <div class="card">
+                        <div class="sentencia-id">Sentencia {fila['Sentencia']}</div>
+                        <div class="meta">
+                            <b>Magistrado Ponente:</b> {fila['Magistrado Ponente']} | 
+                            <b>Año de la providencia:</b> {fila['anio']}
+                        </div>
+                        <p style='font-size: 15px; line-height: 1.6; color: #333;'>
+                            {fila['text'][:450]}...
+                        </p>
+                        <a href="{fila['url']}" target="_blank" style="color: #1a237e; font-weight: bold; text-decoration: none; border: 1px solid #1a237e; padding: 5px 10px; border-radius: 5px;">
+                            📂 Ver providencia completa
+                        </a>
                     </div>
-                    <p style='font-size: 15px; line-height: 1.6; color: #333;'>
-                        {fila['text'][:450]}...
-                    </p>
-                    <a href="{fila['url']}" target="_blank" style="color: #1a237e; font-weight: bold; text-decoration: none; border: 1px solid #1a237e; padding: 5px 10px; border-radius: 5px;">
-                        📂 Ver providencia completa
-                    </a>
-                </div>
-                """, unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
+        else:
+            st.warning("No se encontraron registros que coincidan con la combinación de términos y filtros seleccionados.")
     else:
-        st.warning("No se encontraron registros que coincidan con la combinación de términos y filtros seleccionados.")
+        # Mensaje de bienvenida cuando la app está limpia
+        st.info("👋 Bienvenido a RomoLegal. Ingrese un concepto jurídico arriba o use los filtros laterales para comenzar el análisis.")
 
 except Exception as e:
     st.error(f"Error en la conexión con la base de datos: {e}")
