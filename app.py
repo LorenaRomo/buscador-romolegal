@@ -26,7 +26,7 @@ def cargar_datos():
 
 try:
     df = cargar_datos()
-    tema = st.text_input("Ingrese el concepto jurídico (Ej: VIH, Estabilidad laboral):")
+    tema = st.text_input("Ingrese el concepto jurídico (Ej: Habeas Data, eutanasia, inteligencia artificial):")
     
     if tema:
         resultados = df[df['text'].str.contains(tema, case=False, na=False)]
