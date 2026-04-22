@@ -57,7 +57,7 @@ try:
         
         # 2. Créditos de autoría
         st.markdown("---")
-        st.markdown("**developed by: Lorena Romo**")
+        st.markdown("**Developed by Lorena Romo**")
 
     # --- CUERPO PRINCIPAL ---
     st.markdown("<h1 class='titulo'>🏛️ Buscador de Jurisprudencia RomoLegal</h1>", unsafe_allow_html=True)
